@@ -1,19 +1,20 @@
 version: 0.2
 
-phases:
+phases: # contains 3 phases
   install:
     commands:
-      - echo Installing NGINX
-      - sudo apt-get update
-      - sudo apt-get install nginx -y
+      - echo Installing NGINX #shell output
+      - sudo apt-get update # updating machine
+      - sudo apt-get install nginx -y #installing nginx
   build:
     commands:
-      - echo Build started on `date`
-      - cp index.html /var/www/html/
+      - echo Build started on `date` #peint date on shell
+      - cp index.html /var/www/html/ # copies index.html inside nginx folder "/var/www/html/"
   post_build:
-    commands: 
+    commands:
       - echo Configuring NGINX
 
 artifacts:
-  files: 
-    -/var/www/html/index.html
+  files: -/var/www/html/index.html #where you want to store the artifacts
+
+# all the commands run on bash
