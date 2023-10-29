@@ -1,0 +1,69 @@
+pipeline{
+    agent any
+    tools{
+        jdk 'jdk17'
+        nodejs 'node16'
+    }
+    environment{
+        SCANNER_HOME=tool 'sonar-scanner'
+    }
+    stages{
+        stage('Cleaning workspace'){
+            steps{
+                cleanWs()
+            }
+        }
+        stage('Check out from GitHub'){
+            steps{
+                git 'https://github.com/heysourin/2048-React-CICD'
+            }
+        }
+        stage('SonarQube Scan'){
+            steps{
+                withSonarQubeEnv(credentialsId: 'sonar-cred') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Game \
+                    -Dsonar.projectKey=Game '''
+                }
+            }
+        }   
+        stage("Quality Gate"){
+            steps{
+                script{
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-cred'
+                }
+            }
+        }
+        stage('Install Dependencies'){
+            steps{
+                sh "npm install"
+            }
+        }
+        stage('OWASP FS SCAN') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DC'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        stage('TRIVY FS SCAN') {
+            steps {
+                sh "trivy fs . > trivyfs.txt"
+            }
+        }
+        stage("Docker Build & Push"){
+            steps{
+                script{
+                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
+                       sh "docker build -t 2048:latest ."
+                       sh "docker tag 2048:latest rylephoenix/2048-repo:latest"
+                       sh "docker push rylephoenix/2048-repo:latest "
+                    }
+                }
+            }
+        }
+        stage("TRIVY"){
+            steps{
+                sh "trivy image sevenajay/2048:latest > trivy.txt" 
+            }
+        }
+
+    }
